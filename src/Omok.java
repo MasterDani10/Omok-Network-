@@ -13,6 +13,7 @@ public class Omok {
     Player player2 = new Player("Player2");
     ArrayList<Point> player1Stones = new ArrayList<>();
     ArrayList<Point> player2Stones = new ArrayList<>();
+    ArrayList<Point> winningRow = new ArrayList<>();
     //Boolean win = false;
     BoardPanel d = new BoardPanel(new Board(), player1Stones,player2Stones);
     Boolean p1 = true;
@@ -21,6 +22,7 @@ public class Omok {
     Boolean repeat = true;
     Boolean repeatCom = true;
     JComboBox comboBox;
+    JLabel player;
 
     int x = 0;
     int y = 0;
@@ -32,12 +34,13 @@ public class Omok {
     Point point = new Point(0,0);
     Point pointCom = new Point(0,0);
     //Boolean human;
-    int mode = 0;
+    int mode = 1;
     String playerX;
+    Boolean mouseListener = true;
+    Boolean p1Win = false;
 
 
-    public Omok(int mode){
-        this.mode = mode;
+    public Omok(){
         Image imagePlay = Toolkit.getDefaultToolkit().getImage("Resources/play.png").
                 getScaledInstance(20, 20, 20);
         Image imageAbout = Toolkit.getDefaultToolkit().getImage("Resources/about.png").
@@ -135,179 +138,190 @@ public class Omok {
         }
 
         panel2.add(comboBox);
-        JLabel player = new JLabel("Player 1 Turn");
+        player = new JLabel("Player 1 Turn");
         panel3.add(player);
         panel.add(panel2, BorderLayout.NORTH);
         panel.add(panel3);
         center.add(panel, BorderLayout.NORTH);
 
         d.setSize(d.getPreferredSize());
+
+
         d.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseClicked(MouseEvent e) {
                 if(mode == 1){
-                    repeat = true;
-                    point = d.getMousePosition();
-                    while(repeat){
+                    if(mouseListener){
+                        repeat = true;
+                        point = d.getMousePosition();
+                        while(repeat){
 
-                        h = new HumanLogic(point);
-                        point = h.getPoint();
-                        x = h.getUpdatedX();
-                        y = h.getUpdatedY();
+                            h = new HumanLogic(point);
+                            point = h.getPoint();
+                            x = h.getUpdatedX();
+                            y = h.getUpdatedY();
 
-                        if (board.isOccupied(x,y)){
-                            if(p1){
-                                playerX = "Player 1";
+                            if (board.isOccupied(x,y)){
+                                if(p1){
+                                    playerX = "Player 1";
+                                }
+                                else {
+                                    playerX = "Player 2";
+                                }
+                                player.setText(playerX + " Turn (Please Select an Empty Space!!!)");
+                                JOptionPane.showMessageDialog(frame,
+                                        playerX + ", Please Select an Empty Space!!!!",
+                                        "Omok", JOptionPane.PLAIN_MESSAGE);
+                                point = d.getMousePosition();
                             }
                             else {
-                                playerX = "Player 2";
+                                repeat = false;
                             }
-                            player.setText(playerX + " Turn (Please Select an Empty Space!!!)");
-                            JOptionPane.showMessageDialog(frame,
-                                    playerX + ", Please Select an Empty Space!!!!",
-                                    "Omok", JOptionPane.PLAIN_MESSAGE);
-                            point = d.getMousePosition();
+                        }
+
+                        Player playerX;
+                        String j1, j2;
+                        if (p1) {
+                            player1Stones.add(point);
+                            playerX = player1;
+                            j1 = " 1 ";
+                            j2 = " 2 ";
                         }
                         else {
-                            repeat = false;
-                        }
-                    }
-
-                    Player playerX;
-                    String j1, j2;
-                    if (p1) {
-                        player1Stones.add(point);
-                        playerX = player1;
-                        j1 = " 1 ";
-                        j2 = " 2 ";
-                    }
-                    else {
-                        player2Stones.add(point);
-                        playerX = player2;
-                        j1 = " 2 ";
-                        j2 = " 1 ";
-                    }
-
-                    board.selectPlayerOne(player1);
-                    board.placeStone((int)x,(int)y,playerX);
-                    if(board.isWonBy(playerX)){
-                        BoardPanel winning = new BoardPanel(board,player1Stones,player2Stones,board.winningRow(playerX));
-                        center.add(winning, BorderLayout.CENTER);
-                        d = new BoardPanel(board,player1Stones,player2Stones,board.winningRow(playerX));
-                        JOptionPane.showMessageDialog(frame, "Player" + j1 + "Won!!!",
-                                "Omok", JOptionPane.PLAIN_MESSAGE);
-                        player.setText("Player" + j1 + "Won!!!");
-                    }
-                    else {
-                        player.setText("Player" + j2 + "Turn");
-                    }
-
-                    if (board.isFull()){
-                        d = new BoardPanel(board,player1Stones,player2Stones);
-                        JOptionPane.showMessageDialog(frame, "The Game is a Draw",
-                                "Omok", JOptionPane.PLAIN_MESSAGE);
-                    }
-
-                    p1 = !p1;
-                }
-                else {
-                    Player playerCom;
-                    String msg1 = "", msg2 = "";
-                    repeat = true;
-                    System.out.println(d.getMousePosition());
-                    point = d.getMousePosition();
-                    while(repeat){
-
-                        h = new HumanLogic(point);
-                        point = h.getPoint();
-                        x = h.getUpdatedX();
-                        y = h.getUpdatedY();
-
-                        if(board.isOccupied(x,y)){
-                            player.setText("Player 1 Turn (Please Select an Empty Space!!!)");
-                            JOptionPane.showMessageDialog(frame,
-                                    "Player 1, Please Select an Empty Space!!!!",
-                                    "Omok", JOptionPane.PLAIN_MESSAGE);
-                            point = d.getMousePosition();
-                        }
-                        else {
-                            repeat = false;
-                        }
-                    }
-
-                    player1Stones.add(point);
-
-
-                    if(mode == 2){
-                        ComputerLogicRandom random = new ComputerLogicRandom();
-                        repeatCom = true;
-                        while(repeatCom){
-                            xCom = random.getRandom();
-                            yCom = random.getRandom();
-                            if(!board.isOccupied(xCom,yCom)){
-                                repeatCom = false;
-                            }
-                        }
-                        pointCom = new Point(random.getScaled(xCom),random.getScaled(yCom));
-                    }
-                    else if(mode == 3){
-                        ComputerLogicEasy easy = new ComputerLogicEasy(x,y);
-                        repeatCom = true;
-
-                        while (repeatCom){
-                            n++;
-                            xCom = easy.getX(n);
-                            yCom = easy.getY(n);
-                            if(!board.isOccupied(xCom,yCom)){
-                                repeatCom = false;
-                            }
-                        }
-                        pointCom = new Point(easy.getScaled(xCom), easy.getScaled(yCom));
-                    }
-
-                    player2Stones.add(pointCom);
-
-                    Boolean repeatOneTime = true;
-                    while(repeatOneTime){
-                        if(!pCom){
-                            playerCom = player1;
-                            msg1 = "Player 1 Won!!!";
-                            msg2 = "Computer Turn";
-                        }
-                        else {
-                            if(n > 3){
-                                n = 0;
-                            }
-                            repeatOneTime = false;
-                            playerCom = player2;
-                            msg1 = "Computer Won, Better Luck Next Time!";
-                            msg2 = "Player 1 Turn";
-                            x = xCom;
-                            y = yCom;
-
+                            player2Stones.add(point);
+                            playerX = player2;
+                            j1 = " 2 ";
+                            j2 = " 1 ";
                         }
 
                         board.selectPlayerOne(player1);
-                        board.placeStone((int)x,(int)y,playerCom);
-                        if(board.isWonBy(playerCom)){
-                            BoardPanel winning = new BoardPanel(board,player1Stones,player2Stones,board.winningRow(playerCom));
+                        board.placeStone((int)x,(int)y,playerX);
+                        if(board.isWonBy(playerX)){
+                            if(playerX.equals(player1)){ p1Win = true; }
+                            mouseListener = false;
+                            winningRow = board.winningRow(playerX);
+                            BoardPanel winning = new BoardPanel(board,player1Stones,player2Stones,winningRow);
                             center.add(winning, BorderLayout.CENTER);
-                            d = new BoardPanel(board,player1Stones,player2Stones,board.winningRow(playerCom));
-                            player.setText(msg1);
-                            JOptionPane.showMessageDialog(frame, msg1,
+                            JOptionPane.showMessageDialog(frame, "Player" + j1 + "Won!!!",
                                     "Omok", JOptionPane.PLAIN_MESSAGE);
-                            d.repaint();
-                            break;
+                            player.setText("Player" + j1 + "Won!!!");
                         }
                         else {
-                            player.setText(msg2);
+                            player.setText("Player" + j2 + "Turn");
                         }
+
                         if (board.isFull()){
                             d = new BoardPanel(board,player1Stones,player2Stones);
                             JOptionPane.showMessageDialog(frame, "The Game is a Draw",
                                     "Omok", JOptionPane.PLAIN_MESSAGE);
                         }
-                        pCom = !pCom;
+
+                        p1 = !p1;
+                    }
+
+                }
+                else {
+                    if(mouseListener){
+                        Player playerCom;
+                        String msg1 = "", msg2 = "";
+                        repeat = true;
+                        System.out.println(d.getMousePosition());
+                        point = d.getMousePosition();
+                        while(repeat){
+
+                            h = new HumanLogic(point);
+                            point = h.getPoint();
+                            x = h.getUpdatedX();
+                            y = h.getUpdatedY();
+
+                            if(board.isOccupied(x,y)){
+                                player.setText("Player 1 Turn (Please Select an Empty Space!!!)");
+                                JOptionPane.showMessageDialog(frame,
+                                        "Player 1, Please Select an Empty Space!!!!",
+                                        "Omok", JOptionPane.PLAIN_MESSAGE);
+                                point = d.getMousePosition();
+                            }
+                            else {
+                                repeat = false;
+                            }
+                        }
+
+                        player1Stones.add(point);
+
+
+                        if(mode == 2){
+                            ComputerLogicRandom random = new ComputerLogicRandom();
+                            repeatCom = true;
+                            while(repeatCom){
+                                xCom = random.getRandom();
+                                yCom = random.getRandom();
+                                if(!board.isOccupied(xCom,yCom)){
+                                    repeatCom = false;
+                                }
+                            }
+                            pointCom = new Point(random.getScaled(xCom),random.getScaled(yCom));
+                        }
+                        else if(mode == 3){
+                            ComputerLogicEasy easy = new ComputerLogicEasy(x,y);
+                            repeatCom = true;
+
+                            while (repeatCom){
+                                n++;
+                                xCom = easy.getX(n);
+                                yCom = easy.getY(n);
+                                if(!board.isOccupied(xCom,yCom)){
+                                    repeatCom = false;
+                                }
+                            }
+                            pointCom = new Point(easy.getScaled(xCom), easy.getScaled(yCom));
+                        }
+
+                        player2Stones.add(pointCom);
+
+                        Boolean repeatOneTime = true;
+                        while(repeatOneTime){
+                            if(!pCom){
+                                playerCom = player1;
+                                msg1 = "Player 1 Won!!!";
+                                msg2 = "Computer Turn";
+                            }
+                            else {
+                                if(n > 3){
+                                    n = 0;
+                                }
+                                repeatOneTime = false;
+                                playerCom = player2;
+                                msg1 = "Computer Won, Better Luck Next Time!";
+                                msg2 = "Player 1 Turn";
+                                x = xCom;
+                                y = yCom;
+
+                            }
+
+                            board.selectPlayerOne(player1);
+                            board.placeStone((int)x,(int)y,playerCom);
+                            if(board.isWonBy(playerCom)){
+                                mouseListener = false;
+                                winningRow = board.winningRow(playerCom);
+                                player2Stones.remove(player2Stones.size()-1);
+                                BoardPanel winning = new BoardPanel(board,player1Stones,player2Stones,winningRow);
+                                center.add(winning, BorderLayout.CENTER);
+                                player.setText(msg1);
+                                JOptionPane.showMessageDialog(frame, msg1,
+                                        "Omok", JOptionPane.PLAIN_MESSAGE);
+                                d.repaint();
+                                break;
+                            }
+                            else {
+                                player.setText(msg2);
+                            }
+                            if (board.isFull()){
+                                d = new BoardPanel(board,player1Stones,player2Stones);
+                                JOptionPane.showMessageDialog(frame, "The Game is a Draw",
+                                        "Omok", JOptionPane.PLAIN_MESSAGE);
+                            }
+                            pCom = !pCom;
+                        }
                     }
                 }
             }
@@ -318,33 +332,23 @@ public class Omok {
         frame.setVisible(true);
     }
 
-    private void clean(){
-        board = null;
-        player1 = null;
-        player2 = null;
-        player1Stones = null;
-        player2Stones = null;
-        d = null;
-        p1 = null;
-        point = null;
-    }
-
-    private void playButtonClicked(JFrame frame, String mode){
+    private void playButtonClicked(JFrame frame, String modeText){
         int result = JOptionPane.showConfirmDialog(frame,"Do you want to start a new "
-                        + mode + " game?",
+                        + modeText + " game?",
                 "Omok",JOptionPane.YES_NO_OPTION);
         if (result == JOptionPane.YES_OPTION){
-            frame.setVisible(false);
-            frame.dispose();
-            clean();
-            if(mode.equals("Human")){
-                new Omok(1);
+
+            if(modeText.equals("Human")){
+                mode = 1;
+                resetGame();
             }
-            else if(mode.equals("ComputerRandom")){
-                new Omok(2);
+            else if(modeText.equals("ComputerRandom")){
+                mode = 2;
+                resetGame();
             }
-            else if(mode.equals("ComputerEasy")){
-                new Omok(3);
+            else if(modeText.equals("ComputerEasy")){
+                mode = 3;
+                resetGame();
             }
 
         }
@@ -357,6 +361,22 @@ public class Omok {
         about.add(new JLabel(""));
         about.add(new JLabel("Version: 1.0"));
         JOptionPane.showMessageDialog(frame,about,"About",JOptionPane.INFORMATION_MESSAGE);
+    }
+
+    private void resetGame(){
+        board.clear();
+        player1Stones.clear();
+        player2Stones.clear();
+        winningRow.clear();
+        d.repaint();
+        mouseListener = true;
+        if(p1Win){
+            player.setText("Player 2 Turn");
+        }
+        else{
+            player.setText("Player 1 Turn");
+        }
+        p1Win = false;
     }
 
 }

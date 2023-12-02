@@ -21,9 +21,9 @@ public class Board {
         return size;
     }
 
-    public void clear() {
-        board = new int[size][size];
-    }
+//    public void clear() {
+//        board = new int[size][size];
+//    }
 
     public boolean isFull() {
         for (int i = 0; i < board.length; i++) {
@@ -162,6 +162,14 @@ public class Board {
             }
         }
         return new ArrayList<>();// if not returns an empty list
+    }
+
+    public void clear(){
+        for(int i = 0; i < size(); i++){
+            for(int j = 0; j < size(); j++){
+                board[i][j] = 0;
+            }
+        }
     }
 
     public int getRoundedX(int x){
