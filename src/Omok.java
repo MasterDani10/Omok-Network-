@@ -1,9 +1,16 @@
 import javax.swing.*;
+import javax.swing.border.LineBorder;
 import java.awt.*;
 import java.awt.event.InputEvent;
 import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.net.InetAddress;
+import java.net.Socket;
+import java.net.UnknownHostException;
 import java.util.ArrayList;
 
 public class Omok {
@@ -38,6 +45,19 @@ public class Omok {
     String playerX;
     Boolean mouseListener = true;
     Boolean p1Win = false;
+    //NetworkGUI networkUI;
+    Boolean ownServerConnected = false;
+    Socket s;
+    JTextArea serverTextArea;
+    BufferedReader in;
+    int port;
+    JPanel panel2;
+    JLabel opponentText;
+    JLabel connectedText;
+
+    String hostOpponentName;
+    int hostOpponentPort;
+    Boolean isConnected = false;
 
 
     public Omok(){
@@ -47,6 +67,7 @@ public class Omok {
                 getScaledInstance(20, 20, 20);
         ImageIcon iconPlay = new ImageIcon(imagePlay);
         ImageIcon iconAbout = new ImageIcon(imageAbout);
+        serverTextArea = new JTextArea(14,32);
 
         // Frame
         JFrame frame = new JFrame("Omok");
@@ -113,7 +134,7 @@ public class Omok {
         center.setLayout(new BorderLayout());
 
         JPanel panel = new JPanel();
-        JPanel panel2 = new JPanel();
+        panel2 = new JPanel();
         JPanel panel3 = new JPanel();
         panel.setLayout(new BorderLayout());
         JButton p = new JButton("Play");
@@ -122,7 +143,25 @@ public class Omok {
         });
 
         panel2.add(p);
-        panel2.add(new JLabel("            Opponent:"));
+        JButton pair = new JButton("Pair");
+        pair.addActionListener(e -> {
+            port = 8001;
+            if(!ownServerConnected){
+                new Thread(() ->{
+                    OmokServer server = new OmokServer(port);
+                    server.start();
+                }).start();
+                serverTextArea.append("Server created on port " + port +"!\n");
+                ownServerConnected = true;
+            }
+            //networkUI = new NetworkGUI(frame,port);
+            pairButtonClicked(frame);
+
+
+        });
+        panel2.add(pair);
+        opponentText = new JLabel("            Opponent:");
+        panel2.add(opponentText);
 
         if(mode == 1){
             String[] opponents = {"Human", "ComputerRandom", "ComputerEasy"};
@@ -379,4 +418,187 @@ public class Omok {
         p1Win = false;
     }
 
+    private void pairButtonClicked(JFrame frame){
+
+        Color background = new Color(0,0,0,0);
+
+        JFrame pairFrame = new JFrame("Omok");
+        pairFrame.setSize(400,500);
+        JPanel pairPanel1 = new JPanel(new BorderLayout());
+        JPanel pairPanel2 = new JPanel(new BorderLayout());
+
+
+        // Set up the title for different panels
+        pairPanel1.setBorder(BorderFactory.createTitledBorder("Player"));
+        pairPanel2.setBorder(BorderFactory.createTitledBorder("Opponent"));
+
+        JPanel pairPlayerPanel1 = new JPanel();
+        JPanel pairPlayerPanel2 = new JPanel();
+        JPanel pairPlayerPanel3 = new JPanel();
+        pairPlayerPanel1.add(new JLabel("Host name:    "));
+
+        int columnSize = 20;
+        JTextField namePlayer = null;
+        JTextField ipPlayer = null;
+        JTextField portPlayer = new JTextField(""+port, columnSize);
+        Color defaultBackground = portPlayer.getBackground();
+
+        try {
+            namePlayer = new JTextField(InetAddress.getLocalHost().getHostName(),columnSize);
+            ipPlayer = new JTextField(InetAddress.getLocalHost().getHostAddress().trim(),columnSize);
+        } catch (UnknownHostException ex) {
+            throw new RuntimeException(ex);
+        }
+
+        pairPlayerPanel1.add(namePlayer);
+        pairPlayerPanel2.add(new JLabel("IP number:    "));
+        pairPlayerPanel2.add(ipPlayer);
+        pairPlayerPanel3.add(new JLabel("Port number: "));
+        pairPlayerPanel3.add(portPlayer);
+
+        namePlayer.setEditable(false);
+        ipPlayer.setEditable(false);
+        portPlayer.setEditable(false);
+        namePlayer.setHorizontalAlignment(SwingConstants.CENTER);
+        ipPlayer.setHorizontalAlignment(SwingConstants.CENTER);
+        portPlayer.setHorizontalAlignment(SwingConstants.CENTER);
+        namePlayer.setBackground(background);
+        ipPlayer.setBackground(background);
+        portPlayer.setBackground(background);
+
+        LineBorder border = new LineBorder(Color.BLACK);
+        namePlayer.setBorder(border);
+        ipPlayer.setBorder(border);
+        portPlayer.setBorder(border);
+
+        pairPanel1.add(pairPlayerPanel1, BorderLayout.NORTH);
+        pairPanel1.add(pairPlayerPanel2, BorderLayout.CENTER);
+        pairPanel1.add(pairPlayerPanel3, BorderLayout.SOUTH);
+
+
+        JPanel opponentPairPanel1 = new JPanel();
+        JPanel opponentPairPanel2 = new JPanel();
+        JPanel opponentPairPanel3 = new JPanel();
+        opponentPairPanel1.add(new JLabel("Host name / IP: "));
+        JTextField hostOpponent = new JTextField("", columnSize);
+        opponentPairPanel1.add(hostOpponent);
+        opponentPairPanel2.add(new JLabel("Port number:  "));
+        JTextField portOpponent = new JTextField("", columnSize);
+        opponentPairPanel2.add(portOpponent);
+        JButton connect = new JButton("Connect");
+        JButton disconnect = new JButton("Disconnect");
+        disconnect.setEnabled(false);
+        connect.addActionListener(e -> {
+            try {
+                hostOpponentName = hostOpponent.getText();
+                hostOpponentPort = Integer.parseInt(portOpponent.getText());
+                s = new Socket(hostOpponentName, hostOpponentPort);
+                new ClientHandler(s).start();
+                connect.setEnabled(false);
+                disconnect.setEnabled(true);
+                hostOpponent.setEditable(false);
+                portOpponent.setEditable(false);
+                hostOpponent.setBackground(background);
+                portOpponent.setBackground(background);
+                panel2.remove(opponentText);
+                panel2.remove(comboBox);
+                connectedText = new JLabel("                Connected");
+                panel2.add(connectedText);
+                panel2.revalidate();
+                panel2.repaint();
+                isConnected = true;
+            }
+            catch (UnknownHostException e1){
+                warn(pairFrame, "Couldn't Connect To Server, Try Again.");
+            }
+            catch (Exception e2) {
+                e2.printStackTrace();
+            }
+
+        });
+        disconnect.addActionListener(e -> {
+            try {
+                s.close();
+                serverTextArea.append("Disconnected from server.\n");
+            } catch (IOException ex) {
+                throw new RuntimeException(ex);
+            }
+            disconnect.setEnabled(false);
+            connect.setEnabled(true);
+            panel2.remove(connectedText);
+            panel2.add(opponentText);
+            panel2.add(comboBox);
+            panel2.revalidate();
+            panel2.repaint();
+            hostOpponent.setEditable(true);
+            portOpponent.setEditable(true);
+            hostOpponent.setBackground(defaultBackground);
+            portOpponent.setBackground(defaultBackground);
+            isConnected = false;
+        });
+        if(isConnected){
+            hostOpponent.setText(hostOpponentName);
+            portOpponent.setText(String.valueOf(hostOpponentPort));
+            connect.setEnabled(false);
+            disconnect.setEnabled(true);
+            hostOpponent.setEditable(false);
+            portOpponent.setEditable(false);
+            hostOpponent.setBackground(background);
+            portOpponent.setBackground(background);
+        }
+        opponentPairPanel3.add(connect);
+        opponentPairPanel3.add(disconnect);
+        pairPanel2.add(opponentPairPanel1, BorderLayout.NORTH);
+        pairPanel2.add(opponentPairPanel2, BorderLayout.CENTER);
+        pairPanel2.add(opponentPairPanel3, BorderLayout.SOUTH);
+
+        JPanel serverPanel = new JPanel(new BorderLayout());
+        serverTextArea.setEditable(false);
+        JPanel serverPanelEast = new JPanel(new BorderLayout());
+        JButton close = new JButton("Close");
+        close.addActionListener(e -> {
+            pairFrame.dispose();
+        });
+        serverPanelEast.add(close, BorderLayout.EAST);
+        JPanel serverPanelCenter = new JPanel();
+        serverPanelCenter.add(serverTextArea);
+        serverPanel.add(serverPanelCenter,BorderLayout.CENTER);
+        serverPanel.add(serverPanelEast,BorderLayout.SOUTH);
+
+
+
+        JPanel playerOpponentPanel = new JPanel(new BorderLayout());
+        playerOpponentPanel.add(pairPanel1,BorderLayout.NORTH);
+        playerOpponentPanel.add(pairPanel2,BorderLayout.SOUTH);
+        pairFrame.setLayout(new BorderLayout());
+        pairFrame.add(playerOpponentPanel, BorderLayout.NORTH);
+        pairFrame.add(serverPanel, BorderLayout.CENTER);
+        pairFrame.setVisible(true);
+    }
+
+
+
+    private class ClientHandler extends Thread {
+        private Socket socket;
+        public ClientHandler(Socket socket) {
+            this.socket = socket;
+        }
+        public void run() {
+            try {
+                in = new BufferedReader(new InputStreamReader(
+                        socket.getInputStream()));
+                String str = null;
+                while((str = in.readLine()) != null){
+                    serverTextArea.append(str+ "\n");
+                }
+            }
+            catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        }
+    }
+    private void warn(Frame frame,String msg) {
+        JOptionPane.showMessageDialog(frame, msg, "Omok",
+                JOptionPane.PLAIN_MESSAGE);
+    }
 }
