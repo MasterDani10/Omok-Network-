@@ -45,6 +45,7 @@ public class OmokServer {
         }
     }
 
+
     private void broadcast(String msg) {
         for (PrintWriter out: clients) {
             out.println(msg);
@@ -56,7 +57,7 @@ public class OmokServer {
         new OmokServer().start();
     }
 
-    private class ClientHandler extends Thread {
+    class ClientHandler extends Thread {
         private Socket incoming;
         public ClientHandler(Socket incoming) {
             this.incoming = incoming;

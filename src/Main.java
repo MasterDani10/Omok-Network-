@@ -1,5 +1,5 @@
-public class Main {
-    public static void main(String[] args){
-        Omok omok = new Omok();
-    }
-}
+//public class Main {
+//    public static void main(String[] args){
+//        Omok omok = new Omok();
+//    }
+//}

@@ -297,7 +297,7 @@ public class NetworkAdapter {
     }
 
     /** Parse and return the body of the given message. */
-    private String msgBody(String msg) {
+    public String msgBody(String msg) {
         int i = msg.indexOf(':');
         if (i > -1) {
             msg = msg.substring(i + 1);
@@ -341,7 +341,7 @@ public class NetworkAdapter {
     }
 
     /** Send the given message asynchronously. */
-    private void writeMsg(String msg) {
+    public void writeMsg(String msg) {
         messageWriter.write(msg);
     }
 
@@ -419,7 +419,7 @@ public class NetworkAdapter {
      * in a first-in, first-out manner. To halt the background thread,
      * call the @{link #stop()} method.
      */
-    private class MessageWriter {
+    public class MessageWriter {
 
         /** Background thread to write messages asynchronously. */
         private Thread writerThread;
