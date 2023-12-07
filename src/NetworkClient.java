@@ -11,9 +11,11 @@ public class NetworkClient extends NetworkAdapter {
     private PrintWriter writer;
     private BufferedReader reader;
     private static NetworkAdapter network;
+    private ApiClient apiClient;
 
     public NetworkClient(Socket socket) {
         super(socket);
+        apiClient = new ApiClient();
         try{
             this.writer = new PrintWriter(socket.getOutputStream(), true);
             this.reader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
@@ -53,6 +55,15 @@ public class NetworkClient extends NetworkAdapter {
             e.printStackTrace();
         }
     }
+    
+    public void sendMove( int x, int y) throws IOException {
+        apiClient.sendMove(getPlayerId(), x, y);
+    }
+
+    private String getPlayerId() {
+        return Player.name();
+    }
+
     public static void startClient() {
         try {
             String address = "localhost";
@@ -60,7 +71,7 @@ public class NetworkClient extends NetworkAdapter {
             Socket socket = new Socket(address, serverPort);
             NetworkClient client = new NetworkClient(socket);
 
-            client.writePlay();
+            client.sendMove(0,0);
 
         } catch (IOException e) {
             e.printStackTrace();

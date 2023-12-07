@@ -1,6 +1,6 @@
 public class Player {
     /** Name of this player. */
-    private final String name;
+    private static String name;
 
     /** Create a new player with the given name. */
     public Player(String name) {
@@ -8,7 +8,7 @@ public class Player {
     }
 
     /** Return the name of this player. */
-    public String name() {
+    public static String name() {
         return name;
     }
 }
