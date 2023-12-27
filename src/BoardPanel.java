@@ -7,6 +7,7 @@ public class BoardPanel extends JPanel {
     int size;
     int width = 450+10;
     int height = 450+10;
+    int playerWin;
     ArrayList<Point> player1Stones;
     ArrayList<Point> player2Stones;
     ArrayList<Point> winningRow;
@@ -19,12 +20,12 @@ public class BoardPanel extends JPanel {
         this.player2Stones = p2;
 
     }
-    public BoardPanel(Board board, ArrayList<Point> p1, ArrayList<Point> p2, ArrayList<Point> winner){
+    public BoardPanel(Board board, ArrayList<Point> p1, ArrayList<Point> p2, ArrayList<Point> winner, int playerWin){
         this.board = board;
         this.player1Stones = p1;
         this.player2Stones = p2;
         this.winningRow = winner;
-
+        this.playerWin = playerWin;
     }
     @Override
     protected void paintComponent(Graphics g){

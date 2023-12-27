@@ -1,5 +1,4 @@
 import javax.swing.*;
-import javax.swing.border.LineBorder;
 import java.awt.*;
 import java.awt.event.InputEvent;
 import java.awt.event.KeyEvent;
@@ -8,78 +7,62 @@ import java.awt.event.MouseEvent;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.io.PrintWriter;
-import java.net.InetAddress;
-import java.net.ServerSocket;
-import java.net.Socket;
-import java.net.UnknownHostException;
+import java.net.*;
 import java.util.ArrayList;
+import org.json.JSONArray;
+import org.json.JSONObject;
 
-
-public class Omok extends JFrame{
+public class Omok {
     Board board = new Board();
-    HumanLogic h;
     Player player1 = new Player("Player1");
     Player player2 = new Player("Player2");
     ArrayList<Point> player1Stones = new ArrayList<>();
     ArrayList<Point> player2Stones = new ArrayList<>();
     ArrayList<Point> winningRow = new ArrayList<>();
-    //Boolean win = false;
-    BoardPanel d = new BoardPanel(new Board(), player1Stones, player2Stones);
-    Boolean p1 = true;
-    Boolean pCom = false;
-    Boolean restart = false;
+    BoardPanel d = new BoardPanel(new Board(), player1Stones,player2Stones);
     Boolean repeat = true;
-    Boolean repeatCom = true;
     JComboBox comboBox;
     JLabel player;
 
     int x = 0;
     int y = 0;
-    int xCom = 0;
-    int yCom = 0;
-    int xComScaled = 0;
-    int yComScaled = 0;
-    int n = 0;
-    Point point = new Point(0, 0);
-    Point pointCom = new Point(0, 0);
-    //Boolean human;
-    int mode = 1;
-    String playerX;
-    Boolean mouseListener = true;
-    Boolean p1Win = false;
-    //NetworkGUI networkUI;
-    Boolean ownServerConnected = false;
-    Socket s;
+    Point point = new Point(0,0);
+    Point pointCom = new Point(0,0);
+    Boolean mouseListener = false;
     JTextArea serverTextArea;
     BufferedReader in;
-    int port;
     JPanel panel2;
     JLabel opponentText;
-    JLabel connectedText;
-
-    String hostOpponentName;
-    int hostOpponentPort;
+    HumanLogic h;
     Boolean isConnected = false;
-    Boolean isServer;
-    int serverPort;
+    int size;
+    JButton connect;
+    JSONObject computerMove;
+    BoardPanel winning;
+    JPanel center;
+    Boolean winningPanel = false;
+    String pid;
+    String response;
+    String urlGetInfo = "http://omok.atwebpages.com/info/";
+    String newGame = "http://omok.atwebpages.com/new/?strategy=%s";
+    String move = "http://omok.atwebpages.com/play/?pid=%s&x=%d&y=%d";
 
-    public Omok(boolean isServer, int serverPort) {
-        this.isServer = isServer;
-        this.serverPort = serverPort;
 
+
+    public Omok(){
+        board.selectPlayerOne(player1);
         Image imagePlay = Toolkit.getDefaultToolkit().getImage("Resources/play.png").
                 getScaledInstance(20, 20, 20);
         Image imageAbout = Toolkit.getDefaultToolkit().getImage("Resources/about.png").
                 getScaledInstance(20, 20, 20);
         ImageIcon iconPlay = new ImageIcon(imagePlay);
         ImageIcon iconAbout = new ImageIcon(imageAbout);
-        serverTextArea = new JTextArea(14, 32);
+        serverTextArea = new JTextArea(14,32);
 
         // Frame
         JFrame frame = new JFrame("Omok");
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        frame.setSize(470, 615);
+        frame.setSize(470,615);
 
         // Menu Bar
         JMenuBar menuBar = new JMenuBar();
@@ -96,7 +79,7 @@ public class Omok extends JFrame{
         menuItemPlay.getAccessibleContext().setAccessibleDescription(
                 "Play game");
         menuItemPlay.addActionListener(e -> {
-            playButtonClicked(frame, (String) comboBox.getSelectedItem());
+            playButtonClicked(frame,(String)comboBox.getSelectedItem());
         });
         menu.add(menuItemPlay);
 
@@ -119,7 +102,7 @@ public class Omok extends JFrame{
         JButton playTool = new JButton();
         playTool.setIcon(iconPlay);
         playTool.addActionListener(e -> {
-            playButtonClicked(frame, (String) comboBox.getSelectedItem());
+            playButtonClicked(frame, (String)comboBox.getSelectedItem());
         });
         playTool.setToolTipText("Play a new game");
         playTool.setFocusPainted(false);
@@ -137,7 +120,7 @@ public class Omok extends JFrame{
         //playTool.
         frame.add(toolBar, BorderLayout.NORTH);
 
-        JPanel center = new JPanel();
+        center = new JPanel();
         center.setLayout(new BorderLayout());
 
         JPanel panel = new JPanel();
@@ -146,54 +129,22 @@ public class Omok extends JFrame{
         panel.setLayout(new BorderLayout());
         JButton p = new JButton("Play");
         p.addActionListener(e -> {
-            playButtonClicked(frame, (String) comboBox.getSelectedItem());
+            playButtonClicked(frame,(String)comboBox.getSelectedItem());
         });
 
         panel2.add(p);
-        JButton pair = new JButton("Pair");
-        pair.addActionListener(e -> {
-            port = 8000;
-            int attempts = 2;
-            int currentPort = port;
-
-            while(currentPort < port + attempts) {
-                if (!isPortInUse(currentPort)) {
-                    port = currentPort;
-
-                    if (!ownServerConnected) {
-                        new Thread(() -> {
-                            OmokServer server = new OmokServer(port);
-                            server.start();
-                        }).start();
-                        serverTextArea.append("Server created on port " + port + "!\n");
-                        ownServerConnected = true;
-                        break;
-                    }
-                }
-                currentPort++;
-            }
-            //networkUI = new NetworkGUI(frame,port);
-            pairButtonClicked(frame);
-
-
+        connect = new JButton("Connect");
+        connect.addActionListener(e -> {
+            connectButtonClicked(frame,urlGetInfo);
         });
-        panel2.add(pair);
-        opponentText = new JLabel("            Opponent:");
+        panel2.add(connect);
+        opponentText = new JLabel("       Opponent:");
         panel2.add(opponentText);
-
-        if (mode == 1) {
-            String[] opponents = {"Human", "ComputerRandom", "ComputerEasy"};
-            comboBox = new JComboBox(opponents);
-        } else if (mode == 2) {
-            String[] opponents = {"ComputerRandom", "Human", "ComputerEasy"};
-            comboBox = new JComboBox(opponents);
-        } else if (mode == 3) {
-            String[] opponents = {"ComputerEasy", "Human", "ComputerRandom"};
-            comboBox = new JComboBox(opponents);
-        }
+        String[] placeholder = {"             "};
+        comboBox = new JComboBox(placeholder);
 
         panel2.add(comboBox);
-        player = new JLabel("Player 1 Turn");
+        player = new JLabel("Welcome to Omok");
         panel3.add(player);
         panel.add(panel2, BorderLayout.NORTH);
         panel.add(panel3);
@@ -201,420 +152,267 @@ public class Omok extends JFrame{
 
         d.setSize(d.getPreferredSize());
 
-
         d.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseClicked(MouseEvent e) {
-                if (mode == 1) {
-                    if (mouseListener) {
-                        repeat = true;
-                        point = d.getMousePosition();
-                        while (repeat) {
-
-                            h = new HumanLogic(point);
-                            point = h.getPoint();
-                            x = h.getUpdatedX();
-                            y = h.getUpdatedY();
-
-                            if (board.isOccupied(x, y)) {
-                                if (p1) {
-                                    playerX = "Player 1";
-                                } else {
-                                    playerX = "Player 2";
-                                }
-                                player.setText(playerX + " Turn (Please Select an Empty Space!!!)");
-                                JOptionPane.showMessageDialog(frame,
-                                        playerX + ", Please Select an Empty Space!!!!",
-                                        "Omok", JOptionPane.PLAIN_MESSAGE);
-                                point = d.getMousePosition();
-                            } else {
-                                repeat = false;
-                            }
+                if (mouseListener){
+                    repeat = true;
+                    point = d.getMousePosition();
+                    while (repeat){
+                        h = new HumanLogic(point);
+                        point = h.getPoint();
+                        x = h.getUpdatedX();
+                        y = h.getUpdatedY();
+                        System.out.println(x+y);
+                        if(board.isOccupied(x,y)){
+                            System.out.println("occupied");
+                            player.setText("Your Turn (Please Select an Empty Space!!!)");
+                            warn(frame,"Please Select an Empty Space!!!");
+                            point = d.getMousePosition();
                         }
-
-                        Player playerX;
-                        String j1, j2;
-                        if (p1) {
-                            player1Stones.add(point);
-                            playerX = player1;
-                            j1 = " 1 ";
-                            j2 = " 2 ";
-                        } else {
-                            player2Stones.add(point);
-                            playerX = player2;
-                            j1 = " 2 ";
-                            j2 = " 1 ";
+                        else {
+                            repeat = false;
                         }
+                    }
+                    player1Stones.add(point);
+                    board.placeStone(x,y,player1);
+                    player.setText("Computer Thinking");
+                    center.add(d, BorderLayout.CENTER);
+                    frame.add(center);
+                    frame.setVisible(true);
+                    String url = String.format(move,pid,x,y);
 
-                        board.selectPlayerOne(player1);
-                        board.placeStone((int) x, (int) y, playerX);
-                        if (board.isWonBy(playerX)) {
-                            if (playerX.equals(player1)) {
-                                p1Win = true;
-                            }
-                            mouseListener = false;
-                            winningRow = board.winningRow(playerX);
-                            BoardPanel winning = new BoardPanel(board, player1Stones, player2Stones, winningRow);
-                            center.add(winning, BorderLayout.CENTER);
-                            JOptionPane.showMessageDialog(frame, "Player" + j1 + "Won!!!",
-                                    "Omok", JOptionPane.PLAIN_MESSAGE);
-                            player.setText("Player" + j1 + "Won!!!");
-                        } else {
-                            player.setText("Player" + j2 + "Turn");
+                    Thread workerThread = new Thread(new Runnable() {
+                        @Override
+                        public void run() {
+                            // Call your sendGet method from within run
+                            response = sendGet(url);
                         }
-
-                        if (board.isFull()) {
-                            d = new BoardPanel(board, player1Stones, player2Stones);
-                            JOptionPane.showMessageDialog(frame, "The Game is a Draw",
-                                    "Omok", JOptionPane.PLAIN_MESSAGE);
-                        }
-
-                        p1 = !p1;
+                    });
+                    workerThread.start();
+                    try {
+                        workerThread.join();
+                    } catch (InterruptedException ex) {
+                        ex.printStackTrace();
                     }
 
-                } else {
-                    if (mouseListener) {
-                        Player playerCom;
-                        String msg1 = "", msg2 = "";
-                        repeat = true;
-                        System.out.println(d.getMousePosition());
-                        point = d.getMousePosition();
-                        while (repeat) {
+                    System.out.println(response);
+                    JSONObject obj = new JSONObject(response);
+                    Boolean accepted = obj.getBoolean("response");
+                    if(accepted){
+                        JSONObject ack_move = obj.getJSONObject("ack_move");
+                        Boolean isWinAck = ack_move.getBoolean("isWin");
+                        Boolean isWin = false;
+                        Boolean isWinMove = false;
+                        if(!isWinAck){
+                            computerMove = obj.getJSONObject("move");
+                            isWinMove = computerMove.getBoolean("isWin");
 
-                            h = new HumanLogic(point);
-                            point = h.getPoint();
-                            x = h.getUpdatedX();
-                            y = h.getUpdatedY();
-
-                            if (board.isOccupied(x, y)) {
-                                player.setText("Player 1 Turn (Please Select an Empty Space!!!)");
-                                JOptionPane.showMessageDialog(frame,
-                                        "Player 1, Please Select an Empty Space!!!!",
-                                        "Omok", JOptionPane.PLAIN_MESSAGE);
-                                point = d.getMousePosition();
-                            } else {
-                                repeat = false;
+                            if(isWinMove){
+                                isWin = true;
                             }
+                            System.out.println("Win move " + isWinMove);
+                            int x = computerMove.getInt("x");
+                            int y = computerMove.getInt("y");
+                            board.placeStone(x,y,player2);
+                            x = getScaled(x);
+                            y = getScaled(y);
+                            pointCom = new Point(x,y);
+                            player2Stones.add(pointCom);
+                        }
+                        System.out.println("Hello");
+                        System.out.println(isWinAck);
+                        player.setText("Your Turn");
+                        if(isWinAck){
+                            isWin = true;
+                        }
+                        if(isWin){
+                            mouseListener = false;
+                            String winnerString;
+                            JSONArray winningRowArray;
+                            int playerWin;
+                            if(isWinAck){
+                                playerWin = 1;
+                                winnerString = "You Won, Congratulations!!!";
+                                winningRowArray = ack_move.getJSONArray("row");
+                                winningRow = readJsonRowArray(winningRowArray);
+
+                            }
+                            else {
+                                playerWin = 2;
+                                winnerString = "Computer Won, Better Luck Next Time.";
+                                winningRowArray = computerMove.getJSONArray("row");
+                                winningRow = readJsonRowArray(winningRowArray);
+                            }
+                            player.setText(winnerString);
+                            winning = new BoardPanel(board,player1Stones,player2Stones,winningRow,playerWin);
+                            center.add(winning, BorderLayout.CENTER);
+                            winningPanel = true;
+                            warn(frame,winnerString);
+                            d.repaint();
                         }
 
-                        player1Stones.add(point);
+                    }
+                    else {
 
-
-                        if (mode == 2) {
-                            ComputerLogicRandom random = new ComputerLogicRandom();
-                            repeatCom = true;
-                            while (repeatCom) {
-                                xCom = random.getRandom();
-                                yCom = random.getRandom();
-                                if (!board.isOccupied(xCom, yCom)) {
-                                    repeatCom = false;
-                                }
-                            }
-                            pointCom = new Point(random.getScaled(xCom), random.getScaled(yCom));
-                        } else if (mode == 3) {
-                            ComputerLogicEasy easy = new ComputerLogicEasy(x, y);
-                            repeatCom = true;
-
-                            while (repeatCom) {
-                                n++;
-                                xCom = easy.getX(n);
-                                yCom = easy.getY(n);
-                                if (!board.isOccupied(xCom, yCom)) {
-                                    repeatCom = false;
-                                }
-                            }
-                            pointCom = new Point(easy.getScaled(xCom), easy.getScaled(yCom));
-                        }
-
-                        player2Stones.add(pointCom);
-
-                        Boolean repeatOneTime = true;
-                        while (repeatOneTime) {
-                            if (!pCom) {
-                                playerCom = player1;
-                                msg1 = "Player 1 Won!!!";
-                                msg2 = "Computer Turn";
-                            } else {
-                                if (n > 3) {
-                                    n = 0;
-                                }
-                                repeatOneTime = false;
-                                playerCom = player2;
-                                msg1 = "Computer Won, Better Luck Next Time!";
-                                msg2 = "Player 1 Turn";
-                                x = xCom;
-                                y = yCom;
-
-                            }
-
-                            board.selectPlayerOne(player1);
-                            board.placeStone((int) x, (int) y, playerCom);
-                            if (board.isWonBy(playerCom)) {
-                                mouseListener = false;
-                                winningRow = board.winningRow(playerCom);
-                                player2Stones.remove(player2Stones.size() - 1);
-                                BoardPanel winning = new BoardPanel(board, player1Stones, player2Stones, winningRow);
-                                center.add(winning, BorderLayout.CENTER);
-                                player.setText(msg1);
-                                JOptionPane.showMessageDialog(frame, msg1,
-                                        "Omok", JOptionPane.PLAIN_MESSAGE);
-                                d.repaint();
-                                break;
-                            } else {
-                                player.setText(msg2);
-                            }
-                            if (board.isFull()) {
-                                d = new BoardPanel(board, player1Stones, player2Stones);
-                                JOptionPane.showMessageDialog(frame, "The Game is a Draw",
-                                        "Omok", JOptionPane.PLAIN_MESSAGE);
-                            }
-                            pCom = !pCom;
-                        }
                     }
                 }
+
             }
         });
-
         center.add(d, BorderLayout.CENTER);
         frame.add(center);
         frame.setVisible(true);
     }
-    private boolean isPortInUse(int port)  {
-        try(Socket ignored = new Socket("localhost", port)){
-            return true;
-        } catch (IOException ignored){
-            return false;
+
+    private void playButtonClicked(JFrame frame, String modeText){
+        if(!isConnected){
+            warn(frame,"Please Connect to the Server");
+        }
+        else {
+            int result = JOptionPane.showConfirmDialog(frame,"Do you want to start a new "
+                            + modeText + " game?",
+                    "Omok",JOptionPane.YES_NO_OPTION);
+            if (result == JOptionPane.YES_OPTION){
+                resetGame();
+                String url = String.format(newGame, modeText);
+                String game = sendGet(url);
+                System.out.println(game);
+                JSONObject obj = new JSONObject(game);
+                Boolean startGame = obj.getBoolean("response");
+                if(startGame){
+                    pid = obj.getString("pid");
+                    player.setText("Your Turn");
+                }
+                else{
+                    String reason = obj.getString("reason");
+                    System.out.println(reason);
+                    warn(frame,"Couldn't Connect to Server, Try Disconnecting and Connecting Again.");
+                }
+            }
         }
     }
-    private void playButtonClicked(JFrame frame, String modeText) {
-        int result = JOptionPane.showConfirmDialog(frame, "Do you want to start a new "
-                        + modeText + " game?",
-                "Omok", JOptionPane.YES_NO_OPTION);
-        if (result == JOptionPane.YES_OPTION) {
+    private void aboutButtonClicked(JFrame frame){
+        JPanel about = new JPanel(new GridLayout(0,1,5,5));
+        about.add(new JLabel("Authors:"));
+        about.add(new JLabel("Luis Daniel Estrada Aguirre"));
+        about.add(new JLabel(""));
+        about.add(new JLabel("Version: 1.0"));
+        JOptionPane.showMessageDialog(frame,about,"About",JOptionPane.INFORMATION_MESSAGE);
+    }
 
-            if (modeText.equals("Human")) {
-                mode = 1;
+    private void connectButtonClicked(Frame frame, String urlGetInfo){
+        if(!isConnected){
+            try {
+                String info = sendGet(urlGetInfo);
+                JSONObject obj = new JSONObject(info);
+                size = obj.getInt("size");
+                JSONArray strategies = (JSONArray) obj.get("strategies");
+                String[] opponents = jsonArraytoStringArray(strategies);
+                System.out.println(size);
+                System.out.println(opponents[0]);
+                panel2.remove(comboBox);
+                comboBox = new JComboBox(opponents);
+                panel2.add(comboBox);
+                connect.setText("Disconnect");
+                panel2.revalidate();
+                panel2.repaint();
+                player.setText("Connected to Server");
+                isConnected = true;
+            } catch (Exception ex) {
+                warn(frame, "Couldn't Connect to Server, Try Again.");
+                throw new RuntimeException(ex);
+            }
+        }
+        else {
+            int result = JOptionPane.showConfirmDialog(frame,"Do you want to disconnect from the server?\n(This will end the game)",
+                    "Omok",JOptionPane.YES_NO_OPTION);
+            if (result == JOptionPane.YES_OPTION){
+                panel2.remove(comboBox);
+                String[] placeholder = {"             "};
+                comboBox = new JComboBox(placeholder);
+                panel2.add(comboBox);
+                connect.setText("Connect");
+                panel2.revalidate();
+                panel2.repaint();
+                isConnected = false;
                 resetGame();
-            } else if (modeText.equals("ComputerRandom")) {
-                mode = 2;
-                resetGame();
-            } else if (modeText.equals("ComputerEasy")) {
-                mode = 3;
-                resetGame();
+                player.setText("Disconnected From Server");
+                mouseListener = false;
+
             }
 
         }
+
     }
 
-    private void aboutButtonClicked(JFrame frame) {
-        JPanel about = new JPanel(new GridLayout(0, 1, 5, 5));
-        about.add(new JLabel("Authors:"));
-        about.add(new JLabel("Luis Daniel Estrada Aguirre"));
-        about.add(new JLabel("Benjamin Laffita"));
-        about.add(new JLabel(""));
-        about.add(new JLabel("Version: 1.0"));
-        JOptionPane.showMessageDialog(frame, about, "About", JOptionPane.INFORMATION_MESSAGE);
-    }
-
-    private void resetGame() {
+    private void resetGame(){
         board.clear();
         player1Stones.clear();
         player2Stones.clear();
         winningRow.clear();
+        if (winningPanel){
+            center.remove(winning);
+        }
+        winningPanel = false;
         d.repaint();
         mouseListener = true;
-        if (p1Win) {
-            player.setText("Player 2 Turn");
-        } else {
-            player.setText("Player 1 Turn");
-        }
-        p1Win = false;
+        player.setText("Your Turn");
+
     }
-
-    private void pairButtonClicked(JFrame frame) {
-
-        Color background = new Color(0, 0, 0, 0);
-
-        JFrame pairFrame = new JFrame("Omok");
-        pairFrame.setSize(400, 500);
-        JPanel pairPanel1 = new JPanel(new BorderLayout());
-        JPanel pairPanel2 = new JPanel(new BorderLayout());
-
-
-        // Set up the title for different panels
-        pairPanel1.setBorder(BorderFactory.createTitledBorder("Player"));
-        pairPanel2.setBorder(BorderFactory.createTitledBorder("Opponent"));
-
-        JPanel pairPlayerPanel1 = new JPanel();
-        JPanel pairPlayerPanel2 = new JPanel();
-        JPanel pairPlayerPanel3 = new JPanel();
-        pairPlayerPanel1.add(new JLabel("Host name:    "));
-
-        int columnSize = 20;
-        JTextField namePlayer = null;
-        JTextField ipPlayer = null;
-        JTextField portPlayer = new JTextField("" + port, columnSize);
-        Color defaultBackground = portPlayer.getBackground();
-
-        try {
-            namePlayer = new JTextField(InetAddress.getLocalHost().getHostName(), columnSize);
-            ipPlayer = new JTextField(InetAddress.getLocalHost().getHostAddress().trim(), columnSize);
-        } catch (UnknownHostException ex) {
-            throw new RuntimeException(ex);
-        }
-
-        pairPlayerPanel1.add(namePlayer);
-        pairPlayerPanel2.add(new JLabel("IP number:    "));
-        pairPlayerPanel2.add(ipPlayer);
-        pairPlayerPanel3.add(new JLabel("Port number: "));
-        pairPlayerPanel3.add(portPlayer);
-
-        namePlayer.setEditable(false);
-        ipPlayer.setEditable(false);
-        portPlayer.setEditable(false);
-        namePlayer.setHorizontalAlignment(SwingConstants.CENTER);
-        ipPlayer.setHorizontalAlignment(SwingConstants.CENTER);
-        portPlayer.setHorizontalAlignment(SwingConstants.CENTER);
-        namePlayer.setBackground(background);
-        ipPlayer.setBackground(background);
-        portPlayer.setBackground(background);
-
-        LineBorder border = new LineBorder(Color.BLACK);
-        namePlayer.setBorder(border);
-        ipPlayer.setBorder(border);
-        portPlayer.setBorder(border);
-
-        pairPanel1.add(pairPlayerPanel1, BorderLayout.NORTH);
-        pairPanel1.add(pairPlayerPanel2, BorderLayout.CENTER);
-        pairPanel1.add(pairPlayerPanel3, BorderLayout.SOUTH);
-
-
-        JPanel opponentPairPanel1 = new JPanel();
-        JPanel opponentPairPanel2 = new JPanel();
-        JPanel opponentPairPanel3 = new JPanel();
-        opponentPairPanel1.add(new JLabel("Host name / IP: "));
-        JTextField hostOpponent = new JTextField("", columnSize);
-        opponentPairPanel1.add(hostOpponent);
-        opponentPairPanel2.add(new JLabel("Port number:  "));
-        JTextField portOpponent = new JTextField("", columnSize);
-        opponentPairPanel2.add(portOpponent);
-        JButton connect = new JButton("Connect");
-        JButton disconnect = new JButton("Disconnect");
-        disconnect.setEnabled(false);
-        connect.addActionListener(e -> {
-            try {
-                hostOpponentName = hostOpponent.getText();
-                hostOpponentPort = Integer.parseInt(portOpponent.getText());
-                s = new Socket(hostOpponentName, hostOpponentPort);
-                new ClientHandler(s).start();
-                connect.setEnabled(false);
-                disconnect.setEnabled(true);
-                hostOpponent.setEditable(false);
-                portOpponent.setEditable(false);
-                hostOpponent.setBackground(background);
-                portOpponent.setBackground(background);
-                panel2.remove(opponentText);
-                panel2.remove(comboBox);
-                connectedText = new JLabel("                Connected");
-                panel2.add(connectedText);
-                panel2.revalidate();
-                panel2.repaint();
-                isConnected = true;
-                NetworkServer.startServer();
-                NetworkClient.startClient();
-
-            }
-            catch (UnknownHostException e1){
-                warn(pairFrame, "Couldn't Connect To Server, Try Again.");
-            }
-            catch (Exception e2) {
-                e2.printStackTrace();
-            }
-        });
-        disconnect.addActionListener(e -> {
-            try {
-                s.close();
-                serverTextArea.append("Disconnected from server.\n");
-            } catch (IOException ex) {
-                throw new RuntimeException(ex);
-            }
-            disconnect.setEnabled(false);
-            connect.setEnabled(true);
-            panel2.remove(connectedText);
-            panel2.add(opponentText);
-            panel2.add(comboBox);
-            panel2.revalidate();
-            panel2.repaint();
-            hostOpponent.setEditable(true);
-            portOpponent.setEditable(true);
-            hostOpponent.setBackground(defaultBackground);
-            portOpponent.setBackground(defaultBackground);
-            isConnected = false;
-        });
-        if (isConnected) {
-            hostOpponent.setText(hostOpponentName);
-            portOpponent.setText(String.valueOf(hostOpponentPort));
-            connect.setEnabled(false);
-            disconnect.setEnabled(true);
-            hostOpponent.setEditable(false);
-            portOpponent.setEditable(false);
-            hostOpponent.setBackground(background);
-            portOpponent.setBackground(background);
-        }
-        opponentPairPanel3.add(connect);
-        opponentPairPanel3.add(disconnect);
-        pairPanel2.add(opponentPairPanel1, BorderLayout.NORTH);
-        pairPanel2.add(opponentPairPanel2, BorderLayout.CENTER);
-        pairPanel2.add(opponentPairPanel3, BorderLayout.SOUTH);
-
-        JPanel serverPanel = new JPanel(new BorderLayout());
-        serverTextArea.setEditable(false);
-        JPanel serverPanelEast = new JPanel(new BorderLayout());
-        JButton close = new JButton("Close");
-        close.addActionListener(e -> {
-            pairFrame.dispose();
-        });
-        serverPanelEast.add(close, BorderLayout.EAST);
-        JPanel serverPanelCenter = new JPanel();
-        serverPanelCenter.add(serverTextArea);
-        serverPanel.add(serverPanelCenter, BorderLayout.CENTER);
-        serverPanel.add(serverPanelEast, BorderLayout.SOUTH);
-
-
-        JPanel playerOpponentPanel = new JPanel(new BorderLayout());
-        playerOpponentPanel.add(pairPanel1, BorderLayout.NORTH);
-        playerOpponentPanel.add(pairPanel2, BorderLayout.SOUTH);
-        pairFrame.setLayout(new BorderLayout());
-        pairFrame.add(playerOpponentPanel, BorderLayout.NORTH);
-        pairFrame.add(serverPanel, BorderLayout.CENTER);
-        pairFrame.setVisible(true);
-    }
-
-
-    private class ClientHandler extends Thread {
-        private Socket socket;
-
-        public ClientHandler(Socket socket) {
-            this.socket = socket;
-        }
-
-        public void run() {
-            try {
-                in = new BufferedReader(new InputStreamReader(
-                        socket.getInputStream()));
-                String str = null;
-                while ((str = in.readLine()) != null) {
-                    serverTextArea.append(str + "\n");
-                }
-            } catch (IOException e) {
-                throw new RuntimeException(e);
-            }
-        }
-    }
-
-    private void warn(Frame frame, String msg) {
+    private void warn(Frame frame,String msg) {
         JOptionPane.showMessageDialog(frame, msg, "Omok",
                 JOptionPane.PLAIN_MESSAGE);
     }
 
+    public String sendGet(String urlString) {
+        HttpURLConnection con = null;
+        try {
+            URL url = new URL(urlString);
+            con = (HttpURLConnection) url.openConnection();
+            BufferedReader in = new BufferedReader(new InputStreamReader(con.getInputStream()));
+            StringBuilder response = new StringBuilder();
+            String line;
+            while ((line = in.readLine()) != null) {
+                response.append(line);
+            }
+            return response.toString();
+        } catch (IOException e) {
+            //e.printStackTrace();
+        } finally {
+            if (con != null) {
+                con.disconnect();
+            }
+        }
+        return null;
+    }
+
+    public String[] jsonArraytoStringArray(JSONArray array) {
+        if(array == null)
+            return new String[0];
+
+        String[] arr = new String[array.length()];
+        for(int i=0; i<arr.length; i++) {
+            arr[i]=array.optString(i);
+        }
+        return arr;
+    }
+    public int getScaled(int x){
+        return (x*30)+10;
+    }
+    private ArrayList<Point> readJsonRowArray(JSONArray array){
+        ArrayList<Point> arrayList = new ArrayList<Point>();
+        Point p;
+        for (int i = 0; i < array.length(); i = i+2) {
+            int x = array.getInt(i);
+            int y = array.getInt(i+1);
+            p = new Point(x,y);
+            arrayList.add(p);
+        }
+        return arrayList;
+    }
+
+    public static void main(String[] args){
+        Omok omok = new Omok();
+    }
 }

@@ -21,10 +21,6 @@ public class Board {
         return size;
     }
 
-//    public void clear() {
-//        board = new int[size][size];
-//    }
-
     public boolean isFull() {
         for (int i = 0; i < board.length; i++) {
             for (int j = 0; j < board[i].length; j++) {
